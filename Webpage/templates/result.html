@@ -1,0 +1,135 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Kết quả</title>
+    <style>
+        body {
+            background: #bab7b7;
+            font-family: Arial, sans-serif;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            flex-direction: column;
+            height: 100vh;
+            margin: 0;
+        }
+
+        .container {
+            background-color: white;
+            padding: 30px;
+            border-top-left-radius: 15px;
+            border-top-right-radius: 15px;
+            {#box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);#}
+            text-align: center;
+            width: 1000px;
+        }
+
+
+        p {
+            margin-top: 20px;
+            color: #6c757d; /* Light grey color for the text */
+        }
+
+        img {
+            margin-top: 20px;
+            max-width: 100%;
+            height: auto;
+            border-radius: 5px;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 20px;
+            border:1px solid black;
+            text-align: center;
+        }
+
+        th, td {
+            padding: 8px;
+            border-bottom: 1px solid black;
+            text-align: center;
+        }
+
+        th {
+            text-align: center;
+            color:  #333333;
+            border:1px solid black; /* Green color for the heading */
+        }
+
+        td {
+            text-align: center;
+            color: #333333;
+            border:1px solid black;
+            font-size: large; /* Light grey color for the text */
+        }
+
+        a {
+            color: white;
+            background-color: #4CAF50; /* Green color */
+            padding: 10px 15px;
+            border: none;
+            cursor: pointer;
+            margin-top: 10px;
+            border-radius: 5px;
+            font-size: 1rem; /* Adjust font size */
+            text-decoration: none; /* Remove underline */
+            font-family: Arial, sans-serif; /* Change font family */
+        }
+        .action {
+            border-top-left-radius: 0;
+            border-top-right-radius: 0;
+            border-bottom-left-radius: 15px;
+            border-bottom-right-radius: 15px;
+        }
+
+    </style>
+     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.9.2/html2pdf.bundle.min.js"></script>
+</head>
+<body>
+    <div class="container">
+        <h2>Kết quả chuẩn đoán</h2>
+        <div style="display: flex">
+            <div style="width: 50%">
+              <img style="width: 80%" src="/static/{{filename}}">
+            </div>
+        </div>
+
+        <br>
+        <table>
+            <tr>
+                <th>Tên bệnh nhân</th>
+                <th>Tuổi</th>
+                <th>Mức độ xác xuất </th>
+                <th>Chuẩn đoán lâm sàng</th>
+            </tr>
+            <tr>
+                <td>{{ username }}</td>
+                <td>{{ age }}</td>
+                <td>{{ stage }}</td>
+                <td>{{ predicted_class }}</td>
+            </tr>
+        </table>
+        <br><br>
+    </div>
+    <div class="container action">
+        <a href="/">Trở về</a>
+        <a style="background: #337ab7" id="download" >Tải kết quả chuẩn đoán</a>
+    </div>
+     <script>
+        document.getElementById("download").addEventListener("click", function () {
+            const element = document.querySelector(".container");
+            const options = {
+                margin: 1,
+                filename: 'ket_qua_chuan_doan.pdf',
+                image: { type: 'jpeg', quality: 0.98 },
+                html2canvas: { scale: 1 },
+                jsPDF: { unit: 'in', format: 'a3', orientation: 'landscape' }
+            };
+            html2pdf().set(options).from(element).save();
+        });
+    </script>
+</body>
+</html>
