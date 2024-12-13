@@ -179,7 +179,8 @@ def index():
                         'result.html',
                         stage=f"{probability:.2%}",
                         predicted_class=result,
-                        filename=processed_path.replace("static/", "")
+                        filename=processed_path.replace("static/", ""),
+                        normal=file.filename
                     )
 
                 # elif prediction_type == 'lung_cancer':
