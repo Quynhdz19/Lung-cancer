@@ -7,9 +7,9 @@ import cv2
 
 app = Flask(__name__, static_folder="static")
 
-model_image = tf.keras.models.load_model('./models/dr.h5')
+model_image = tf.keras.models.load_model('./models/dr_model.h5')
 
-model_lung_cancer = tf.keras.models.load_model('./models/dr.h5')
+model_lung_cancer = tf.keras.models.load_model('./models/dr_model.h5')
 
 class_labels = {
     0: "0%",

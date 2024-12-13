@@ -140,7 +140,11 @@
             font-size: 18px;
             color: #333333;
         }
-
+        select {
+            width: auto;
+            height: 40px;
+            border-radius: 5px;
+        }
     </style>
 
 </head>
@@ -152,16 +156,21 @@
     <form method="POST" enctype="multipart/form-data" class="father">
         <div class="children">
             <div class="form-group">
-                <label class="label" for="email">Tên bệnh nhân:</label>
-                <input type="username" class="form-control" id="username" placeholder="Nhập tên " name="username">
+                <label class="label" for="username">Tên bệnh nhân:</label>
+                <input type="text" class="form-control" id="username" placeholder="Nhập tên " name="username">
             </div>
             <div class="form-group">
                 <label class="label" for="age">Tuổi:</label>
-                <input type="age" class="form-control" id="email" placeholder="Nhập tuổi" name="age">
+                <input type="text" class="form-control" id="age" placeholder="Nhập tuổi" name="age">
             </div>
         </div>
 
         <div class="preview-container children">
+            <select name="prediction_type" required>
+                <option value="dr">Chuẩn đoán DR võng mạc </option>
+                <option value="lung_cancer">Chuẩn đoán ung thư phổi</option>
+                <option value="covid">Chuẩn đoán phổi COVID-19</option>
+            </select>
             <label for="file" class="label-2">
                 Upload ảnh CT hoặc X-quang của phổi
             </label>
