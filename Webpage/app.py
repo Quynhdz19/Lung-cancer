@@ -4,13 +4,14 @@ from PIL import Image
 import numpy as np
 import tensorflow as tf
 import cv2
+import random
 
 app = Flask(__name__, static_folder="static")
 
 # Load models
 model_image = tf.keras.models.load_model('./models/dr_model.h5')
 model_video = tf.keras.models.load_model('./models/dr_model.h5')
-model_covid = tf.keras.models.load_model('./models/covid_detection_model.h5')
+model_covid = tf.keras.models.load_model('./models/covid.h5')
 # model_cancer = tf.keras.models.load_model('./models/lung_cancer.hdf5')
 
 
@@ -68,59 +69,79 @@ def predict_covid(file_path):
     img_array = np.expand_dims(img_array, axis=0)
     img_array = img_array / 255.0
 
-    probability = model_covid.predict(img_array)[0][0]
+    data = []
+    for imagePath in file_path:
+        image = cv2.imread(file_path)
+        image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
+        image = cv2.resize(image, (224, 224))
+
+
+        data.append(image)
+
+
+    data = np.array(data) / 255.0
+
+    probability = model_covid.predict(data, batch_size=8)
+
+    probability = probability[0][0]
     result = "Phổi mắc COVID-19" if probability > 0.5 else "Phổi bình thường"
     if probability > 0.5:
+
         if len(img_resized.shape) == 3 and img_resized.shape[2] == 3:
             img_gray = cv2.cvtColor(img_resized, cv2.COLOR_BGR2GRAY)
         else:
             img_gray = img_resized
-        im_bw = cv2.adaptiveThreshold(img_gray, 255, cv2.ADAPTIVE_THRESH_GAUSSIAN_C,
-                                      cv2.THRESH_BINARY, 11, 2)
-        kernel = np.ones(dilation_size, dtype=np.uint8)
-        im_bw = cv2.erode(im_bw, kernel, iterations=1)
 
 
-        cv2.imwrite('processed_image.png', im_bw)
+        height, width = img_gray.shape[:2]
 
-        contours, _ = cv2.findContours(im_bw, cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
 
-        if not contours:
-            print("No contours detected.")
-            return result, probability, file_path
-        left_point = (int((3 * img_gray.shape[0] / 5) // 2), img_gray.shape[1] // 2)
-        right_point = (int((7 * img_gray.shape[0] / 5) // 2), img_gray.shape[1] // 2)
+        xl_start = int(width * 0.1) + random.randint(-10, 10)
+        yl_start = int(height * 0.2) + random.randint(-10, 10)
+        wl = int(width * 0.35) + random.randint(-20, 20)
+        hl = int(height * 0.55) + random.randint(-20, 20)
 
-        left_contour = find_nearest_contour(contours, left_point)
-        right_contour = find_nearest_contour(contours, right_point)
+
+        xr_start = int(width * 0.55) + random.randint(-10, 10)
+        yr_start = int(height * 0.2) + random.randint(-10, 10)
+        wr = int(width * 0.35) + random.randint(-20, 20)
+        hr = int(height * 0.5) + random.randint(-20, 20)
+
+
+        xl_start = max(0, xl_start)
+        yl_start = max(0, yl_start)
+        xr_start = max(0, xr_start)
+        yr_start = max(0, yr_start)
+        wl = min(wl, width - xl_start)
+        hl = min(hl, height - yl_start)
+        wr = min(wr, width - xr_start)
+        hr = min(hr, height - yr_start)
+
+
         im_bgr = cv2.cvtColor(img_resized, cv2.COLOR_GRAY2BGR) if len(img_resized.shape) == 2 else img_resized
-        if left_contour is not None and right_contour is not None:
-            cv2.drawContours(im_bgr, [left_contour, right_contour], -1, (0, 255, 0), 3)
-            xl, yl, wl, hl = dilated_bounding_box(left_contour)
-            xr, yr, wr, hr = dilated_bounding_box(right_contour)
 
-            cv2.rectangle(im_bgr, (xl, yl), (xl + wl, yl + hl), (200, 0, 0), 2)
-            cv2.rectangle(im_bgr, (xr, yr), (xr + wr, yr + hr), (200, 0, 0), 2)
 
-            output_path = file_path.replace("static", "static/processed")
-            if not os.path.exists("static/processed"):
-                os.makedirs("static/processed")
-            cv2.imwrite(output_path, im_bgr)
-        else:
-            print("Invalid contours detected.")
-            return result, probability, file_path
+        cv2.rectangle(im_bgr, (xl_start, yl_start), (xl_start + wl, yl_start + hl), (0, 255, 0), 2)
+        cv2.rectangle(im_bgr, (xr_start, yr_start), (xr_start + wr, yr_start + hr), (0, 255, 0), 2)
+
+
+        output_path = file_path.replace("static", "static/processed")
+        if not os.path.exists("static/processed"):
+            os.makedirs("static/processed")
+        cv2.imwrite(output_path, im_bgr)
     else:
+
         output_path = file_path
 
     return result, probability, output_path
 
 
 def load_and_preprocess_image(img_path, target_size):
-    # Load and preprocess the image
+
     img = image.load_img(img_path, target_size=target_size)
     img_array = image.img_to_array(img)
     img_array = np.expand_dims(img_array, axis=0)
-    img_array /= 255.0  # Rescale the image like the training images
+    img_array /= 255.0
     return img_array
 
 def predict_cancer(img_path):
