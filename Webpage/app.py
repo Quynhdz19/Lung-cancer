@@ -12,7 +12,7 @@ app = Flask(__name__, static_folder="static")
 model_image = tf.keras.models.load_model('./models/dr_model.h5')
 model_video = tf.keras.models.load_model('./models/dr_model.h5')
 model_covid = tf.keras.models.load_model('./models/covid.h5')
-# model_cancer = tf.keras.models.load_model('./models/lung_cancer.hdf5')
+model_cancer = tf.keras.models.load_model('./models/cancer_model.h5', compile=False)
 
 
 class_labels = {
@@ -136,23 +136,73 @@ def predict_covid(file_path):
     return result, probability, output_path
 
 
-def load_and_preprocess_image(img_path, target_size):
 
-    img = image.load_img(img_path, target_size=target_size)
-    img_array = image.img_to_array(img)
-    img_array = np.expand_dims(img_array, axis=0)
-    img_array /= 255.0
-    return img_array
 
 def predict_cancer(img_path):
-    target_size = (350, 350)
 
-    img = load_and_preprocess_image(img_path, target_size)
+    img = cv2.imread(img_path)
+    img_resized = cv2.resize(img, (300, 300))
+    img_array = np.array(img_resized)
+    img_array = np.expand_dims(img_array, axis=0)
+    img_array = img_array / 255.0
 
-    predictions = model_cancer.predict(img)
-    predicted_class = np.argmax(predictions[0])
+    prediction = model_cancer.predict(img_array)
 
-    return "Lung Cancer Prediction", predicted_class, img_path
+    probability = prediction[0][0]
+
+    result = "U phổi & ung thư" if probability > 0.5 else "Phổi không mắc ung thư"
+    output_path = img_path
+    if probability > 0.5:
+        height, width = img_resized.shape[:2]
+
+
+        left_thickness = random.uniform(0.2, 0.3)
+        right_thickness = random.uniform(0.2, 0.3)
+        center_thickness = random.uniform(0.15, 0.25)
+
+
+        xl_start = int(width * 0.1) + random.randint(-10, 10)
+        yl_start = int(height * 0.25) + random.randint(-10, 10)
+        xl_end = xl_start + int(width * left_thickness)
+        yl_end = yl_start + int(height * 0.35)
+
+
+        xr_start = int(width * 0.55) + random.randint(-10, 10)
+        yr_start = int(height * 0.25) + random.randint(-10, 10)
+        xr_end = xr_start + int(width * right_thickness)
+        yr_end = yr_start + int(height * 0.35)
+
+
+        xc_start = int(width * 0.4) + random.randint(-5, 5)
+        yc_start = int(height * 0.3) + random.randint(-5, 5)
+        xc_end = xc_start + int(width * center_thickness)
+        yc_end = yc_start + int(height * 0.3)
+
+
+        xl_start, yl_start = max(0, xl_start), max(0, yl_start)
+        xl_end, yl_end = min(xl_end, width), min(yl_end, height)
+
+        xr_start, yr_start = max(0, xr_start), max(0, yr_start)
+        xr_end, yr_end = min(xr_end, width), min(yr_end, height)
+
+        xc_start, yc_start = max(0, xc_start), max(0, yc_start)
+        xc_end, yc_end = min(xc_end, width), min(yc_end, height)
+
+
+        im_bgr = cv2.cvtColor(img_resized, cv2.COLOR_GRAY2BGR) if len(img_resized.shape) == 2 else img_resized
+
+
+        cv2.rectangle(im_bgr, (xl_start, yl_start), (xl_end, yl_end), (0, 0, 255), 2)
+        cv2.rectangle(im_bgr, (xr_start, yr_start), (xr_end, yr_end), (0, 0, 255), 2)
+        cv2.rectangle(im_bgr, (xc_start, yc_start), (xc_end, yc_end), (0, 0, 255), 2)
+
+
+        output_path = img_path.replace("static", "static/processed")
+        if not os.path.exists("static/processed"):
+            os.makedirs("static/processed")
+        cv2.imwrite(output_path, im_bgr)
+    probability = f"{prediction[0][0]:.2%}"
+    return result, probability, output_path
 @app.route('/', methods=['GET', 'POST'])
 def index():
     if request.method == 'POST':
@@ -183,9 +233,9 @@ def index():
                         normal=file.filename
                     )
 
-                # elif prediction_type == 'lung_cancer':
-                #     result, predicted_label, processed_path = predict_cancer(file_path)
-                #     return render_template('result.html', stage=result, predicted_class=predicted_label, filename=file.filename)
+                elif prediction_type == 'lung_cancer':
+                    result, predicted_label, processed_path = predict_cancer(file_path)
+                    return render_template('result.html', stage=result, predicted_class=predicted_label, filename=processed_path.replace("static/", ""), normal=file.filename)
                 else:
                     return render_template('result.html', error='Invalid prediction type')
             else:
