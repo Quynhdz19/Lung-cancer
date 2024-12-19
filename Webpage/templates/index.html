@@ -145,6 +145,19 @@
             height: 40px;
             border-radius: 5px;
         }
+        select {
+            display: none;
+        }
+        .back {
+          background-color: rgb(0, 73, 118);
+          padding: 10px;
+          color: #fff;
+          border-radius: 5px;
+        }
+        .back:hover {
+           background-color: rgb(0, 73, 118);
+            color: #fff;
+        }
     </style>
 
 </head>
@@ -152,6 +165,7 @@
 <body>
 <div class="container">
 
+    <h1 id="title"></h1>
     <br>
     <form method="POST" enctype="multipart/form-data" class="father">
         <div class="children">
@@ -172,7 +186,7 @@
                 <option value="covid">Chuẩn đoán phổi COVID-19</option>
             </select>
             <label for="file" class="label-2">
-                Upload ảnh CT hoặc X-quang của phổi
+                Upload img định dạng jpg, jpeg, npg
             </label>
             <img id="preview_image" src="" style="display: none;">
             <video id="preview_video" controls style="display: none;">
@@ -183,13 +197,50 @@
             <input type="submit" value="Chuẩn đoán hình ảnh">
         </div>
 
+
+
     </form>
+     <a class="back" href="/">Trở về</a>
 
     {% if error %}
         <p class="error">{{ error }}</p>
     {% endif %}
 </div>
 <script>
+    function updateFormBasedOnUrl() {
+        const url = window.location.href;
+        const titleElement = document.getElementById('title');
+        const selectElement = document.querySelector('select[name="prediction_type"]');
+
+        const options = selectElement.querySelectorAll('option');
+        options.forEach(option => option.style.display = 'block');
+
+        if (url.includes('predict-lung-cancer')) {
+            titleElement.textContent = 'Chuẩn đoán ung thư phổi';
+            selectElement.value = 'lung_cancer';
+            hideOtherOptions('lung_cancer');
+        } else if (url.includes('predict-lung-covid')) {
+            titleElement.textContent = 'Chuẩn đoán COVID';
+            selectElement.value = 'covid';
+            hideOtherOptions('covid');
+        } else if (url.includes('predict-dr')) {
+            titleElement.textContent = 'Chuẩn đoán DR võng mạc';
+            selectElement.value = 'dr';
+            hideOtherOptions('dr');
+        } else {
+            titleElement.textContent = 'Vui lòng chọn loại chuẩn đoán';
+        }
+
+        // Ẩn các option không phù hợp
+        function hideOtherOptions(selectedValue) {
+            options.forEach(option => {
+                if (option.value !== selectedValue) {
+                    option.style.display = 'none';
+                }
+            });
+        }
+    }
+    window.onload = updateFormBasedOnUrl;
     const fileInput = document.getElementById('file');
     const previewImage = document.getElementById('preview_image');
     const previewVideo = document.getElementById('preview_video');

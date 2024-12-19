@@ -203,7 +203,12 @@ def predict_cancer(img_path):
         cv2.imwrite(output_path, im_bgr)
     probability = f"{prediction[0][0]:.2%}"
     return result, probability, output_path
-@app.route('/', methods=['GET', 'POST'])
+
+@app.route('/', methods=['GET'])
+def home():
+    return render_template('home.html', error=None)
+
+@app.route('/predict-lung-cancer', methods=['GET', 'POST'])
 def index():
     if request.method == 'POST':
         if 'file' not in request.files:
@@ -242,6 +247,104 @@ def index():
                 return render_template('result.html', error='Unsupported file format')
 
     return render_template('index.html', error=None)
+@app.route('/predict-lung-covid', methods=['GET', 'POST'])
+def covid():
+    if request.method == 'POST':
+        if 'file' not in request.files:
+            return render_template('result.html', error='No file part')
+
+        file = request.files['file']
+
+        if file.filename == '':
+            return render_template('result.html', error='No selected file')
+
+        if file:
+            file_path = os.path.join('static', file.filename)
+            file.save(file_path)
+
+            if file.filename.lower().endswith(('.png', '.jpg', '.jpeg')):
+                prediction_type = request.form.get('prediction_type')
+                if prediction_type == 'dr':
+                    stage, predicted_class = classify_image(file_path)
+                    return render_template('result.html', stage=stage, predicted_class=predicted_class, filename=file.filename)
+                elif prediction_type == 'covid':
+                    result, probability, processed_path = predict_covid(file_path)
+                    return render_template(
+                        'result.html',
+                        stage=f"{probability:.2%}",
+                        predicted_class=result,
+                        filename=processed_path.replace("static/", ""),
+                        normal=file.filename
+                    )
+
+                elif prediction_type == 'lung_cancer':
+                    result, predicted_label, processed_path = predict_cancer(file_path)
+                    return render_template('result.html', stage=result, predicted_class=predicted_label, filename=processed_path.replace("static/", ""), normal=file.filename)
+                else:
+                    return render_template('result.html', error='Invalid prediction type')
+            else:
+                return render_template('result.html', error='Unsupported file format')
+
+    return render_template('index.html', error=None)\
+
+@app.route('/predict-dr', methods=['GET', 'POST'])
+def dr():
+    if request.method == 'POST':
+        if 'file' not in request.files:
+            return render_template('result.html', error='No file part')
+
+        file = request.files['file']
+
+        if file.filename == '':
+            return render_template('result.html', error='No selected file')
+
+        if file:
+            file_path = os.path.join('static', file.filename)
+            file.save(file_path)
+
+            if file.filename.lower().endswith(('.png', '.jpg', '.jpeg')):
+                prediction_type = request.form.get('prediction_type')
+                if prediction_type == 'dr':
+                    stage, predicted_class = classify_image(file_path)
+                    return render_template('result.html', stage=stage, predicted_class=predicted_class, filename=file.filename)
+                elif prediction_type == 'covid':
+                    result, probability, processed_path = predict_covid(file_path)
+                    return render_template(
+                        'result.html',
+                        stage=f"{probability:.2%}",
+                        predicted_class=result,
+                        filename=processed_path.replace("static/", ""),
+                        normal=file.filename
+                    )
+
+                elif prediction_type == 'lung_cancer':
+                    result, predicted_label, processed_path = predict_cancer(file_path)
+                    return render_template('result.html', stage=result, predicted_class=predicted_label, filename=processed_path.replace("static/", ""), normal=file.filename)
+                else:
+                    return render_template('result.html', error='Invalid prediction type')
+            else:
+                return render_template('result.html', error='Unsupported file format')
+
+    return render_template('index.html', error=None)
+
+@app.route('/upload', methods=['GET'])
+def upload_data():
+    return render_template('upload.html', error=None)
+
+@app.route('/upload', methods=['POST'])
+def upload_data_collection():
+    if 'filename' not in request.form or 'content' not in request.form:
+        return "Invalid data", 400
+
+    filename = request.form['filename']
+    content = request.form['content']
+
+    # Lưu file vào thư mục
+    file_path = os.path.join('data_collection', filename)
+    with open(file_path, 'w') as file:
+        file.write(content)
+
+    return "File saved successfully!", 200
 
 if __name__ == '__main__':
     app.run(debug=True)
