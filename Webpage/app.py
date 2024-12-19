@@ -156,45 +156,34 @@ def predict_cancer(img_path):
         height, width = img_resized.shape[:2]
 
 
-        left_thickness = random.uniform(0.2, 0.3)
-        right_thickness = random.uniform(0.2, 0.3)
-        center_thickness = random.uniform(0.15, 0.25)
+        thickness_threshold = 0.2
 
 
-        xl_start = int(width * 0.1) + random.randint(-10, 10)
-        yl_start = int(height * 0.25) + random.randint(-10, 10)
-        xl_end = xl_start + int(width * left_thickness)
-        yl_end = yl_start + int(height * 0.35)
+        if len(img_resized.shape) == 3:
+            img_gray = cv2.cvtColor(img_resized, cv2.COLOR_BGR2GRAY)
+        else:
+            img_gray = img_resized
 
 
-        xr_start = int(width * 0.55) + random.randint(-10, 10)
-        yr_start = int(height * 0.25) + random.randint(-10, 10)
-        xr_end = xr_start + int(width * right_thickness)
-        yr_end = yr_start + int(height * 0.35)
+        edges = cv2.Canny(img_gray, threshold1=100, threshold2=200)
 
 
-        xc_start = int(width * 0.4) + random.randint(-5, 5)
-        yc_start = int(height * 0.3) + random.randint(-5, 5)
-        xc_end = xc_start + int(width * center_thickness)
-        yc_end = yc_start + int(height * 0.3)
-
-
-        xl_start, yl_start = max(0, xl_start), max(0, yl_start)
-        xl_end, yl_end = min(xl_end, width), min(yl_end, height)
-
-        xr_start, yr_start = max(0, xr_start), max(0, yr_start)
-        xr_end, yr_end = min(xr_end, width), min(yr_end, height)
-
-        xc_start, yc_start = max(0, xc_start), max(0, yc_start)
-        xc_end, yc_end = min(xc_end, width), min(yc_end, height)
+        contours, _ = cv2.findContours(edges, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
 
 
         im_bgr = cv2.cvtColor(img_resized, cv2.COLOR_GRAY2BGR) if len(img_resized.shape) == 2 else img_resized
 
 
-        cv2.rectangle(im_bgr, (xl_start, yl_start), (xl_end, yl_end), (0, 0, 255), 2)
-        cv2.rectangle(im_bgr, (xr_start, yr_start), (xr_end, yr_end), (0, 0, 255), 2)
-        cv2.rectangle(im_bgr, (xc_start, yc_start), (xc_end, yc_end), (0, 0, 255), 2)
+        for contour in contours:
+
+            area = cv2.contourArea(contour)
+
+
+            if area > 500:
+                x, y, w, h = cv2.boundingRect(contour)
+
+
+                cv2.rectangle(im_bgr, (x, y), (x + w, y + h), (0, 0, 255), 2)
 
 
         output_path = img_path.replace("static", "static/processed")
