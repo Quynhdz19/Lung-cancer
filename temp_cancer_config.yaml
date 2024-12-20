@@ -1,5 +1,5 @@
 names:
 - cancer
 nc: 1
-train: /home/quynhlx@kaopiz.local/Documents/Lung-cancer/datasets/cancer_detection_aug/images
-val: /home/quynhlx@kaopiz.local/Documents/Lung-cancer/datasets/cancer_detection/images
+train: /Volumes/SSD SanDisk/projects/abc/datasets/cancer_detection_aug/images
+val: /Volumes/SSD SanDisk/projects/abc/datasets/cancer_detection/images

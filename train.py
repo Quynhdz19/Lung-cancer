@@ -18,7 +18,7 @@ class CustomYOLOModel(YOLO):
     def __init__(self, model_yaml):
         super().__init__(model_yaml)
         # Thay thế backbone của YOLO
-        self.model.model[0] = nn.Sequential(DenseNetBackbone())  # Thay thế module đầu tiên bằng DenseNet
+        self.model.model[0] = nn.Sequential(DenseNetBackbone())  # Thay thế module đầu tiên bằng DenseNet121
 
 # Load cấu hình YOLO với DenseNet backbone
 model = CustomYOLOModel("yolov8n.yaml")
