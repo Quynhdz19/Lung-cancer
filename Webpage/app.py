@@ -140,52 +140,46 @@ def predict_covid(file_path):
 
 
 def predict_cancer(img_path):
-    # Đọc ảnh gốc
-    img = cv2.imread(img_path)
-    img_resized = cv2.resize(img, (640, 640))  # YOLO yêu cầu kích thước ảnh chuẩn hóa
 
-    # Tiền xử lý ảnh
-    # Chuyển đổi sang grayscale
+    img = cv2.imread(img_path)
+    img_resized = cv2.resize(img, (640, 640))
+
+
     img_gray = cv2.cvtColor(img_resized, cv2.COLOR_BGR2GRAY)
 
-    # Tăng cường tương phản bằng CLAHE
+
     clahe = cv2.createCLAHE(clipLimit=3.0, tileGridSize=(8, 8))
     img_enhanced = clahe.apply(img_gray)
 
-    # Giảm nhiễu bằng GaussianBlur
+
     img_denoised = cv2.GaussianBlur(img_enhanced, (5, 5), 0)
 
-    # Chuyển đổi lại thành ảnh 3 kênh (BGR)
+
     img_preprocessed = cv2.cvtColor(img_denoised, cv2.COLOR_GRAY2BGR)
 
-    # Load model YOLO đã huấn luyện
-    model = YOLO("./models/cancer_detection_model.pt")
-    print("Classes:", model.names)
 
-    # Dự đoán bằng YOLO
-    results = model.predict(source=img_preprocessed, conf=0.09)  # Ngưỡng độ tin cậy là 0.1
-    print("results:", results)
-    # Duyệt qua các kết quả và vẽ bounding box lên ảnh
+    model = YOLO("./models/cancer_detection_densenet_model.pt")
+
+    results = model.predict(source=img_preprocessed, conf=0.09)
+
     for result in results:
-        boxes = result.boxes.xyxy.cpu().numpy()  # Tọa độ box (x_min, y_min, x_max, y_max)
-        confidences = result.boxes.conf.cpu().numpy()  # Độ tin cậy
-        class_ids = result.boxes.cls.cpu().numpy()  # ID lớp
-        print("Bounding Boxes (xyxy):", result.boxes.xyxy.cpu().numpy())
-        print("Confidences:", result.boxes.conf.cpu().numpy())
-        print("Class IDs:", result.boxes.cls.cpu().numpy())
+        boxes = result.boxes.xyxy.cpu().numpy()
+        confidences = result.boxes.conf.cpu().numpy()
+        class_ids = result.boxes.cls.cpu().numpy()
+
 
         for box, conf, class_id in zip(boxes, confidences, class_ids):
             x_min, y_min, x_max, y_max = map(int, box)
-            label = "Cancer"  # Tên lớp và độ tin cậy
+            label = "Cancer"
 
-            # Vẽ bounding box và nhãn lên ảnh
+
             cv2.rectangle(img_resized, (x_min, y_min), (x_max, y_max), (0, 255, 0), 2)
             cv2.putText(
                 img_resized, label, (x_min, y_min - 10),
                 cv2.FONT_HERSHEY_SIMPLEX, 0.5, (255, 0, 0), 2
             )
 
-    # Lưu kết quả
+
     output_path = img_path.replace("static", "static/processed")
     if not os.path.exists("static/processed"):
         os.makedirs("static/processed")
