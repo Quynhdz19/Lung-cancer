@@ -1,0 +1,4 @@
+train: datasets/cancer_detection/images
+val: datasets/cancer_detection/images
+nc: 1
+names: ["cancer"]
