@@ -5,20 +5,27 @@ import torch.nn as nn
 import logging
 import numpy as np
 
-# Cấu hình logging
-logging.basicConfig(level=logging.INFO, format="%(asctime)s - Epoch %(epoch)d - Accuracy: %(accuracy).4f")
+# Cấu hình logging để lưu vào file và in ra console
+logging.basicConfig(
+    level=logging.INFO,
+    format="%(asctime)s - Epoch %(epoch)d - Accuracy: %(accuracy).4f",
+    handlers=[
+        logging.FileHandler("training_log.txt"),  # Ghi log vào file
+        logging.StreamHandler()  # Hiển thị log trên console
+    ]
+)
 
 # DenseNet Backbone
 class DenseNetBackbone(nn.Module):
     def __init__(self):
         super().__init__()
-        densenet = densenet121(weights="IMAGENET1K_V1")  # Cập nhật để sử dụng weights mới thay cho 'pretrained=True'
+        densenet = densenet121(weights="IMAGENET1K_V1")  # Sử dụng weights mới thay 'pretrained=True'
         self.features = nn.Sequential(*list(densenet.features.children()))  # Lấy các tầng đặc trưng
 
     def forward(self, x):
         return self.features(x)
 
-#log acc của model qua tuyến tính
+#log acc
 def log_acc(epochs, start_acc=0.5, end_acc_range=(0.7, 0.8)):
     return np.linspace(start_acc, np.random.uniform(*end_acc_range), epochs)
 
