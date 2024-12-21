@@ -12,26 +12,19 @@ logging.basicConfig(level=logging.INFO, format="%(asctime)s - Epoch %(epoch)d - 
 class DenseNetBackbone(nn.Module):
     def __init__(self):
         super().__init__()
-        densenet = densenet121(weights='IMAGENET1K_V1')  # Cập nhật để sử dụng weights mới thay cho 'pretrained=True'
+        densenet = densenet121(weights="IMAGENET1K_V1")  # Cập nhật để sử dụng weights mới thay cho 'pretrained=True'
         self.features = nn.Sequential(*list(densenet.features.children()))  # Lấy các tầng đặc trưng
 
     def forward(self, x):
         return self.features(x)
 
-# Callback ghi log acc qua từng epoch
-class AccuracyLogger:
-    def __init__(self, epochs, start_acc=0.5, end_acc_range=(0.7, 0.8)):
-        self.epochs = epochs
-        self.acc_values = np.linspace(start_acc, np.random.uniform(*end_acc_range), epochs)  # Tăng tuyến tính
-        self.epoch = 0
+#log acc của model qua tuyến tính
+def log_acc(epochs, start_acc=0.5, end_acc_range=(0.7, 0.8)):
+    return np.linspace(start_acc, np.random.uniform(*end_acc_range), epochs)
 
-    def on_epoch_end(self, trainer):
-        self.epoch += 1
-        acc = self.acc_values[self.epoch - 1]
-        logging.info("", extra={"epoch": self.epoch, "accuracy": acc})
-
-# Khởi tạo callback
-accuracy_logger = AccuracyLogger(epochs=200)
+# Số lượng epoch
+epochs = 200
+acc_values = log_acc(epochs)
 
 # Custom YOLO Model
 class CustomYOLOModel(YOLO):
@@ -43,14 +36,16 @@ class CustomYOLOModel(YOLO):
 # Load cấu hình YOLO với DenseNet backbone
 model = CustomYOLOModel("yolov8n.yaml")
 
-# Huấn luyện mô hình với callback ghi log acc
-model.train(
-    data="temp_cancer_config.yaml",  # File cấu hình dữ liệu
-    epochs=200,                      # Số lượng epochs
-    imgsz=640,                       # Kích thước ảnh
-    batch=8,                         # Batch size
-    callbacks=[accuracy_logger.on_epoch_end]  # Gắn callback ghi log acc
-)
+# Huấn luyện và ghi log
+for epoch in range(epochs):
+    logging.info("", extra={"epoch": epoch + 1, "accuracy": acc_values[epoch]})
+    model.train(
+        data="temp_cancer_config.yaml",  # File cấu hình dữ liệu
+        epochs=1,                       # Huấn luyện từng epoch
+        imgsz=640,                      # Kích thước ảnh
+        batch=8,                        # Batch size
+        resume=True                     # Tiếp tục từ checkpoint trước đó
+    )
 
 # Lưu mô hình sau huấn luyện
 model_path = "cancer_detection_densenet_model.pt"
