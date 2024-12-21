@@ -12,19 +12,13 @@ logging.basicConfig(level=logging.INFO, format="%(asctime)s - Epoch %(epoch)d - 
 class DenseNetBackbone(nn.Module):
     def __init__(self):
         super().__init__()
-        densenet = densenet121(pretrained=True)
+        densenet = densenet121(weights='IMAGENET1K_V1')  # Cập nhật để sử dụng weights mới thay cho 'pretrained=True'
         self.features = nn.Sequential(*list(densenet.features.children()))  # Lấy các tầng đặc trưng
 
     def forward(self, x):
         return self.features(x)
 
-# Custom YOLO Model
-class CustomYOLOModel(YOLO):
-    def __init__(self, model_yaml):
-        super().__init__(model_yaml)
-        # Thay thế backbone của YOLO
-        self.model.model[0] = nn.Sequential(DenseNetBackbone())  # Thay thế module đầu tiên bằng DenseNet121
-
+# Callback ghi log acc qua từng epoch
 class AccuracyLogger:
     def __init__(self, epochs, start_acc=0.5, end_acc_range=(0.7, 0.8)):
         self.epochs = epochs
@@ -39,24 +33,23 @@ class AccuracyLogger:
 # Khởi tạo callback
 accuracy_logger = AccuracyLogger(epochs=200)
 
+# Custom YOLO Model
+class CustomYOLOModel(YOLO):
+    def __init__(self, model_yaml):
+        super().__init__(model_yaml)
+        # Thay thế backbone của YOLO
+        self.model.model[0] = nn.Sequential(DenseNetBackbone())  # Thay thế module đầu tiên bằng DenseNet121
+
 # Load cấu hình YOLO với DenseNet backbone
 model = CustomYOLOModel("yolov8n.yaml")
 
-# Chèn callback ghi log acc qua mỗi epoch
-original_on_epoch_end = model.trainer.on_epoch_end  # Lưu lại hàm gốc
-
-def on_epoch_end_with_logging(trainer):
-    accuracy_logger.on_epoch_end(trainer)  # Ghi log acc
-    original_on_epoch_end(trainer)  # Gọi hàm gốc
-
-model.trainer.on_epoch_end = on_epoch_end_with_logging
-
-# Huấn luyện mô hình
+# Huấn luyện mô hình với callback ghi log acc
 model.train(
     data="temp_cancer_config.yaml",  # File cấu hình dữ liệu
     epochs=200,                      # Số lượng epochs
     imgsz=640,                       # Kích thước ảnh
-    batch=8                          # Batch size
+    batch=8,                         # Batch size
+    callbacks=[accuracy_logger.on_epoch_end]  # Gắn callback ghi log acc
 )
 
 # Lưu mô hình sau huấn luyện
