@@ -14,6 +14,7 @@ model_image = tf.keras.models.load_model('./models/dr_model.h5')
 model_video = tf.keras.models.load_model('./models/dr_model.h5')
 model_covid = tf.keras.models.load_model('./models/covid.h5')
 model_cancer = tf.keras.models.load_model('./models/cancer_model.h5', compile=False)
+model_classifier = tf.keras.models.load_model('./models/binary_classification_model_640.h5', compile=False)
 
 
 class_labels = {
@@ -144,11 +145,20 @@ def predict_cancer(img_path):
     img = cv2.imread(img_path)
     img_resized = cv2.resize(img, (640, 640))
 
+    img_cancer = np.array(img_resized)
+    img_cancer = np.expand_dims(img_cancer, axis=0)
+    img_cancer = img_cancer / 255.0
+
+
+
+
 
     img_gray = cv2.cvtColor(img_resized, cv2.COLOR_BGR2GRAY)
 
 
+
     clahe = cv2.createCLAHE(clipLimit=3.0, tileGridSize=(8, 8))
+
     img_enhanced = clahe.apply(img_gray)
 
 
@@ -157,27 +167,28 @@ def predict_cancer(img_path):
 
     img_preprocessed = cv2.cvtColor(img_denoised, cv2.COLOR_GRAY2BGR)
 
+    probability = model_classifier.predict(img_cancer)
+    probability = probability[0][0]
+    model = YOLO("./models/cancer_detection_densenet_model_v2.pt")
+    results = model.predict(source=img_preprocessed, conf=0.1)
+    if probability >= 0.4:
 
-    model = YOLO("./models/cancer_detection_densenet_model.pt")
-
-    results = model.predict(source=img_preprocessed, conf=0.09)
-
-    for result in results:
-        boxes = result.boxes.xyxy.cpu().numpy()
-        confidences = result.boxes.conf.cpu().numpy()
-        class_ids = result.boxes.cls.cpu().numpy()
-
-
-        for box, conf, class_id in zip(boxes, confidences, class_ids):
-            x_min, y_min, x_max, y_max = map(int, box)
-            label = "Cancer"
+        for result in results:
+            boxes = result.boxes.xyxy.cpu().numpy()
+            confidences = result.boxes.conf.cpu().numpy()
+            class_ids = result.boxes.cls.cpu().numpy()
 
 
-            cv2.rectangle(img_resized, (x_min, y_min), (x_max, y_max), (0, 255, 0), 2)
-            cv2.putText(
-                img_resized, label, (x_min, y_min - 10),
-                cv2.FONT_HERSHEY_SIMPLEX, 0.5, (255, 0, 0), 2
-            )
+            for box, conf, class_id in zip(boxes, confidences, class_ids):
+                x_min, y_min, x_max, y_max = map(int, box)
+                label = ""
+
+
+                cv2.rectangle(img_resized, (x_min, y_min), (x_max, y_max), (0, 255, 0), 2)
+                cv2.putText(
+                    img_resized, label, (x_min, y_min - 10),
+                    cv2.FONT_HERSHEY_SIMPLEX, 0.5, (255, 0, 0), 2
+                )
 
 
     output_path = img_path.replace("static", "static/processed")
@@ -185,7 +196,7 @@ def predict_cancer(img_path):
         os.makedirs("static/processed")
     cv2.imwrite(output_path, img_resized)
 
-    return "Vùng bất thường được phát hiện", "80.23%", output_path
+    return "U phổi & dị dạng ", f"{probability:.2%}", output_path
 
 
 @app.route('/', methods=['GET'])
@@ -200,6 +211,9 @@ def index():
 
         file = request.files['file']
 
+        username = request.form.get('username')
+        age = request.form.get('age')
+
         if file.filename == '':
             return render_template('result.html', error='No selected file')
 
@@ -211,7 +225,12 @@ def index():
                 prediction_type = request.form.get('prediction_type')
                 if prediction_type == 'dr':
                     stage, predicted_class = classify_image(file_path)
-                    return render_template('result.html', stage=stage, predicted_class=predicted_class, filename=file.filename)
+                    return render_template('result.html',
+                                           stage=stage,
+                                           predicted_class=predicted_class,
+                                           filename=file.filename,
+                                           username=username,
+                                           age=age)
                 elif prediction_type == 'covid':
                     result, probability, processed_path = predict_covid(file_path)
                     return render_template(
@@ -219,12 +238,20 @@ def index():
                         stage=f"{probability:.2%}",
                         predicted_class=result,
                         filename=processed_path.replace("static/", ""),
-                        normal=file.filename
+                        normal=file.filename,
+                        username=username,
+                        age=age
                     )
 
                 elif prediction_type == 'lung_cancer':
                     result, predicted_label, processed_path = predict_cancer(file_path)
-                    return render_template('result.html', stage=result, predicted_class=predicted_label, filename=processed_path.replace("static/", ""), normal=file.filename)
+                    return render_template('result.html',
+                                           stage=result,
+                                           predicted_class=predicted_label,
+                                           filename=processed_path.replace("static/", ""),
+                                           normal=file.filename,
+                                           username=username,
+                                           age=age)
                 else:
                     return render_template('result.html', error='Invalid prediction type')
             else:
@@ -234,6 +261,8 @@ def index():
 @app.route('/predict-lung-covid', methods=['GET', 'POST'])
 def covid():
     if request.method == 'POST':
+        username = request.form.get('username')
+        age = request.form.get('age')
         if 'file' not in request.files:
             return render_template('result.html', error='No file part')
 
@@ -258,7 +287,9 @@ def covid():
                         stage=f"{probability:.2%}",
                         predicted_class=result,
                         filename=processed_path.replace("static/", ""),
-                        normal=file.filename
+                        normal=file.filename,
+                        username=username,
+                        age=age
                     )
 
                 elif prediction_type == 'lung_cancer':
@@ -278,7 +309,8 @@ def dr():
             return render_template('result.html', error='No file part')
 
         file = request.files['file']
-
+        username = request.form.get('username')
+        age = request.form.get('age')
         if file.filename == '':
             return render_template('result.html', error='No selected file')
 
@@ -290,7 +322,8 @@ def dr():
                 prediction_type = request.form.get('prediction_type')
                 if prediction_type == 'dr':
                     stage, predicted_class = classify_image(file_path)
-                    return render_template('result.html', stage=stage, predicted_class=predicted_class, filename=file.filename)
+                    return render_template('result.html', stage=stage, predicted_class=predicted_class, filename=file.filename,  username=username, normal=file.filename,
+                        age=age)
                 elif prediction_type == 'covid':
                     result, probability, processed_path = predict_covid(file_path)
                     return render_template(
@@ -298,7 +331,9 @@ def dr():
                         stage=f"{probability:.2%}",
                         predicted_class=result,
                         filename=processed_path.replace("static/", ""),
-                        normal=file.filename
+                        normal=file.filename,
+                        username=username,
+                        age=age
                     )
 
                 elif prediction_type == 'lung_cancer':
